@@ -1,0 +1,1 @@
+/home/robotics/Desktop/Coarse Features/EdgeDetection/build/CMakeFiles/edgeDetect.dir

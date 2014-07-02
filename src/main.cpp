@@ -5,63 +5,44 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "cvaux.h"
-#include "averageImage.h"
+#include "edgeDetect.h"
 
 #include <iostream>
 #include <fstream>
 
 using namespace cv;
 using namespace std;
-using namespace averageImage;
 
 // Print usage
 static void printPrompt( const string& applName )
 {
     cout << "/*\n"
-         << " * Sandbox for doing LBP and and Casscade Classifier\n"
+         << " * Edge Detection\n"
          << " */\n" << endl;
 
     cout << endl << "Format:\n" << endl;
-    cout << "./" << applName << " [ImageName] [FileWithMoreImages(.txt)] [Divisions]" << endl;
+    cout << "./" << applName << " [ImageName] " << endl;
     cout << endl;
 }
 
 int main(int argc, char** argv)
 {
-    if( argc < 3 )
+    if( argc < 2 )
     {
         printPrompt( argv[0] );
         return -1;
     }
 
-    cv::initModule_nonfree();
+    // cv::initModule_nonfree();
 
-    // ====== !!! Must load as grayscale !!! ======= //
+    Mat image = imread(argv[1]);
 
-    Mat image = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-    int divs = atoi(argv[2]);
+    Mat SobelEdges = Edges::getSobelEdges(image);
 
-    cout << "< Computing integral Image ... \n";
+    Mat ScharrEdges = Edges::getScharrEdges(image);
 
-    Mat iImage;
-    integral(image, iImage, CV_64F);
-    
-    cout << "> \n< Computing Pixel Sum, after cropping ...\n";
-
-    Rect ROI (1, 1, iImage.cols-1, iImage.rows-1);
-    Mat cropped = iImage(ROI);
-
-    Mat pixsum = getPixSum(cropped, divs);
-
-    imwrite("pixsum.jpg", pixsum);
-
-    cout << "> \n< Computing Black and White Image ...\n";
-
-    Mat ab = aboveBelow(pixsum);
-
-    imwrite("aboveBelow.jpg", ab);
-
-    cout << "> \nDone!" << endl;
+    imwrite("Sobel.jpg", SobelEdges);
+    imwrite("Scharr.jpg", ScharrEdges);
 
     return 0;
 }

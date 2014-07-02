@@ -12,115 +12,47 @@
 using namespace cv;
 using namespace std;
 
-namespace averageImage {
-
-    // Get the sum of the pixel values within a square of an image
-    #define T double
-    T getMagnitude(const int leftx, const int uppery, const int rightx, const int lowery, const Mat& img)
+namespace Edges 
+{
+    Mat getSobelEdges(const Mat& src, const int scale=1, const int delta=0, const int ddepth=CV_16S)
     {
-        double area = (double) ((rightx - leftx) * (lowery - uppery));
-        T one = (T) img.at<T>(uppery, leftx) / area;//(leftx, uppery);
-        T two = (T) img.at<T>(uppery, rightx) / area;//(rightx, uppery);
-        T three = (T) img.at<T>(lowery, leftx) / area;//(leftx, lowery);
-        T four = (T) img.at<T>(lowery,rightx) / area;//(rightx, lowery);
-        // 1 -- 2
-        // |    |
-        // 3 -- 4
-        // cout << "Values: " << one << "\t" << two << "\t" << three << "\t" << four << endl;
-        // cout << img.at<T>(uppery, leftx);
-        // cout << four + one - two - three  << "\t";
-        return four + one - two - three;
+        Mat src_gray;
+        Mat grad, grad_x, grad_y;
+        Mat abs_grad_x, abs_grad_y;
+
+        GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
+
+        cvtColor( src, src_gray, CV_RGB2GRAY );
+
+        Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
+        convertScaleAbs( grad_x, abs_grad_x );
+
+        Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
+        convertScaleAbs( grad_y, abs_grad_y );
+
+        addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
+
+        return grad;
     }
 
-    // Get the pixel sum image of an integral picture.
-    Mat getPixSum(const Mat& image, const int divisions)
+    Mat getScharrEdges(const Mat& src, const int scale=1, const int delta=0, const int ddepth=CV_16S)
     {
-        Mat results(divisions, divisions, CV_64F);
+        Mat src_gray;
+        Mat grad, grad_x, grad_y;
+        Mat abs_grad_x, abs_grad_y;
 
-        float h_division = (float)(image.rows-1)/ (float)divisions;
-        float w_division = (float)(image.cols-1)/ (float)divisions;
+        GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
 
-        int uppery, lowery, leftx, rightx;
-        double mag;
+        cvtColor( src, src_gray, CV_RGB2GRAY );
 
-        for (int r = 0; r < divisions; r++)
-        {
-            uppery = (int) r*h_division;
-            lowery = (int) (r+1)*h_division;
-            for (int c = 0; c < divisions; c++)
-            {
-                leftx = (int) c*w_division;
-                rightx = (int) (c + 1) * w_division;
-                // cout << "r: " << r << "\t" << "c: " << c << "\t" << leftx << "\t" << rightx << "\t" << uppery << "\t" << lowery << endl;
-                mag = getMagnitude(leftx, uppery, rightx, lowery, image);
-                // cout << "\tmag: " << mag << endl;
+        Scharr( src_gray, grad_x, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );
+        convertScaleAbs( grad_x, abs_grad_x );
 
-                results.at<double>(r, c) = mag;
-            }
-        }
-        // cout << "Results:" << endl << results << endl;
-        normalize(results, results, 0, 255, NORM_MINMAX, CV_64F);
-        
-        Mat results2(results.size(), CV_32S);
+        Scharr( src_gray, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
+        convertScaleAbs( grad_y, abs_grad_y );
 
-        for (int r = 0; r < results.rows; r++)
-        {
-            for (int c = 0; c < results.cols; c++)
-            {
-                results2.at<int>(r,c) = (int)results.at<double>(r,c);
-            }
-        }
+        addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
 
-        // cout << "Normalized int Results:\n" << results2 << endl;
-
-        return results2;
+        return grad;
     }
-
-    // Get the bw above and below image of a picture.
-    // Input is the average pixel image
-    // Output is the bw image with above average colored white
-    // and below painted black.
-    Mat aboveBelow(const Mat& image)
-    {
-        Mat results(image.size(), CV_32S);
-        int avg = (int) (mean(image)).val[0];
-
-        for (int r = 0; r < image.rows; r++)
-        {
-            for (int c = 0; c < image.cols; c++)
-            {
-                int i = image.at<int>(r,c);
-                if (i > avg)
-                    results.at<int>(r,c) = 255;
-                else
-                    results.at<int>(r,c) = 0;
-            }
-        }
-
-        return results;
-    }
-
-    // Determine Similarity of two images. Only works for matrices of the same size, for now.
-    float determineSimilarity (const Mat& mat1, const Mat& mat2)
-    {
-        if (mat1.size() != mat2.size())
-        {
-            cout << "Matrices are not the same size";
-            return -1;
-        } 
-
-        int difference = 0;
-
-        for (int r = 0; r < mat1.rows; r++)
-        {
-            for (int c = 0; c < mat1.cols; c++)
-            {
-                difference += abs(mat1.at<int>(r,c) - mat2.at<int>(r,c));
-            }
-        }
-
-        // Calculate mean difference
-        return difference/(mat1.rows * mat1.cols);
-    }
-
 }
